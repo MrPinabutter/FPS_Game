@@ -11,6 +11,7 @@
 #include "Camera.h"
 
 const GLint WIDTH = 800, HEIGHT = 600;
+bool flash = true;
 int SCREEN_WIDTH, SCREEN_HEIGHT;
 
 void updateInput(GLFWwindow* window){   
@@ -34,7 +35,7 @@ bool firstMouse = true;
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
-
+glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
 int main() {
   glfwInit();
@@ -88,121 +89,150 @@ int main() {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  Shader ourShader("core.vs", "core.frag");
+  // Build and compile shaders and lamp
+  Shader lightShader("lighting.vs", "lighting.frag");
+  // Shader lampShader("lamp.vs", "lamp.frag");
 
   // use with Perspective Projection
-  GLfloat vertices[] = {
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-    0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-    0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+  GLfloat vertices[] =
+  {
+    // Positions            // Normals              // Texture Coords
+    -0.5f, -0.5f, -0.5f,    0.0f,  0.0f, -1.0f,     0.0f,  0.0f,
+    0.5f, -0.5f, -0.5f,     0.0f,  0.0f, -1.0f,     1.0f,  0.0f,
+    0.5f,  0.5f, -0.5f,     0.0f,  0.0f, -1.0f,     1.0f,  1.0f,
+    0.5f,  0.5f, -0.5f,     0.0f,  0.0f, -1.0f,     1.0f,  1.0f,
+    -0.5f,  0.5f, -0.5f,    0.0f,  0.0f, -1.0f,     0.0f,  1.0f,
+    -0.5f, -0.5f, -0.5f,    0.0f,  0.0f, -1.0f,     0.0f,  0.0f,
     
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,    0.0f,  0.0f,  1.0f,     0.0f,  0.0f,
+    0.5f, -0.5f,  0.5f,     0.0f,  0.0f,  1.0f,     1.0f,  0.0f,
+    0.5f,  0.5f,  0.5f,     0.0f,  0.0f,  1.0f,     1.0f,  1.0f,
+    0.5f,  0.5f,  0.5f,     0.0f,  0.0f,  1.0f,  	1.0f,  1.0f,
+    -0.5f,  0.5f,  0.5f,    0.0f,  0.0f,  1.0f,     0.0f,  1.0f,
+    -0.5f, -0.5f,  0.5f,    0.0f,  0.0f,  1.0f,     0.0f,  0.0f,
     
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,    -1.0f,  0.0f,  0.0f,    1.0f,  0.0f,
+    -0.5f,  0.5f, -0.5f,    -1.0f,  0.0f,  0.0f,    1.0f,  1.0f,
+    -0.5f, -0.5f, -0.5f,    -1.0f,  0.0f,  0.0f,    0.0f,  1.0f,
+    -0.5f, -0.5f, -0.5f,    -1.0f,  0.0f,  0.0f,    0.0f,  1.0f,
+    -0.5f, -0.5f,  0.5f,    -1.0f,  0.0f,  0.0f,    0.0f,  0.0f,
+    -0.5f,  0.5f,  0.5f,    -1.0f,  0.0f,  0.0f,    1.0f,  0.0f,
     
-    0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    0.5f,  0.5f,  0.5f,     1.0f,  0.0f,  0.0f,     1.0f,  0.0f,
+    0.5f,  0.5f, -0.5f,     1.0f,  0.0f,  0.0f,     1.0f,  1.0f,
+    0.5f, -0.5f, -0.5f,     1.0f,  0.0f,  0.0f,     0.0f,  1.0f,
+    0.5f, -0.5f, -0.5f,     1.0f,  0.0f,  0.0f,     0.0f,  1.0f,
+    0.5f, -0.5f,  0.5f,     1.0f,  0.0f,  0.0f,     0.0f,  0.0f,
+    0.5f,  0.5f,  0.5f,     1.0f,  0.0f,  0.0f,     1.0f,  0.0f,
     
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-    0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,    0.0f, -1.0f,  0.0f,     0.0f,  1.0f,
+    0.5f, -0.5f, -0.5f,     0.0f, -1.0f,  0.0f,     1.0f,  1.0f,
+    0.5f, -0.5f,  0.5f,     0.0f, -1.0f,  0.0f,     1.0f,  0.0f,
+    0.5f, -0.5f,  0.5f,     0.0f, -1.0f,  0.0f,     1.0f,  0.0f,
+    -0.5f, -0.5f,  0.5f,    0.0f, -1.0f,  0.0f,     0.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f,    0.0f, -1.0f,  0.0f,     0.0f,  1.0f,
     
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-    0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-  };  
+    -0.5f,  0.5f, -0.5f,    0.0f,  1.0f,  0.0f,     0.0f,  1.0f,
+    0.5f,  0.5f, -0.5f,     0.0f,  1.0f,  0.0f,     1.0f,  1.0f,
+    0.5f,  0.5f,  0.5f,     0.0f,  1.0f,  0.0f,     1.0f,  0.0f,
+    0.5f,  0.5f,  0.5f,     0.0f,  1.0f,  0.0f,     1.0f,  0.0f,
+    -0.5f,  0.5f,  0.5f,    0.0f,  1.0f,  0.0f,     0.0f,  0.0f,
+    -0.5f,  0.5f, -0.5f,    0.0f,  1.0f,  0.0f,     0.0f,  1.0f
+  };
 
   glm::vec3 cubePositions[] = {
-    glm::vec3( 0.0f, 0.0f, 0.0f ),
-    glm::vec3( 2.0f, 5.0f, -15.0f ),
-    glm::vec3( -1.5f, -2.2f, -2.5f ),
-    glm::vec3( -3.8f, -2.0f, -12.3f ),
-    glm::vec3( 2.4f, -0.4f, -3.5f ),
-    glm::vec3( -1.7f, 3.0f, -7.5f ),
-    glm::vec3( 1.3f, -2.0f, -2.5f ),
-    glm::vec3( 1.5f, 2.0f, -2.5f ),
-    glm::vec3( 1.5f, 0.2f, -1.5f ),
-    glm::vec3( -1.3f, 1.0f, -1.5f ),
-    glm::vec3( -1.0f, 3.0f, -5.0f ),
-    glm::vec3( 4.0f, 5.0f, -5.0f ),
-    glm::vec3( 7.0f, 1.0f, 3.0f )
+    glm::vec3(  0.0f,   0.0f,   0.0f),
+    glm::vec3(  2.0f,   5.0f,   -15.0f),
+    glm::vec3(  -1.5f,  -2.2f,  -2.5f),
+    glm::vec3(  -3.8f,  -2.0f,  -12.3f),
+    glm::vec3(  2.4f,   -0.4f,  -3.5f),
+    glm::vec3(  -1.7f,  3.0f,   -7.5f),
+    glm::vec3(  1.3f,   -2.0f,  -2.5f),
+    glm::vec3(  1.5f,   2.0f,   -2.5f),
+    glm::vec3(  1.5f,   0.2f,   -1.5f),
+    glm::vec3(  -1.3f,  1.0f,   -1.5f)
   };
 
-  GLfloat groundVertices[] = {
-    20.0f, -10.0f, 20.0f, 0.0f, 0.0f,
-    20.0f, -10.0f, -20.0f, 1.0f, 0.0f,
-    -20.0f, -10.0f, 20.0f, 1.0f, 1.0f,
-    -20.0f, -10.0f, -20.0f, 0.0f, 1.0f
-  };
-
-  GLuint VBO, VAO;
-  glGenVertexArrays(1, &VAO);
+  GLuint VBO, boxVAO;
+  glGenVertexArrays(1, &boxVAO);
   glGenBuffers(1, &VBO);
   
-  glBindVertexArray(VAO);
+  glBindVertexArray(boxVAO);
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  // glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
 
   // Position attribute
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), (GLvoid*) 0 );
-  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*) 0 );
+  glEnableVertexAttribArray(0); 
 
-  // Color attribute
-  // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), (GLvoid*) (3*sizeof(GLfloat)) );
-  // glEnableVertexAttribArray(1);
+  // Normal attribute
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*) (3 * sizeof(GLfloat)) );
+  glEnableVertexAttribArray(1); 
 
-  // Texture coordinate attribute
-  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), (GLvoid*) (3*sizeof(GLfloat)) );
-  glEnableVertexAttribArray(2);
+  // Texture attribute
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*) (6 * sizeof(GLfloat)) );
+  glEnableVertexAttribArray(2); 
 
-  glBindVertexArray(0); // Unbind VAO
+  glBindVertexArray(0); // Unbind boxVAO
 
-  GLuint texture;
+/*
+  GLuint lightVAO;
+  glGenVertexArrays(1, &lightVAO);
+  glGenBuffers(1, &VBO);
+  
+  glBindVertexArray(lightVAO);
 
-  int width, height;
-  glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_2D, texture);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  // Position attribute
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*) 0 );
+  glEnableVertexAttribArray(0); // Unbind VAO
+*/
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glBindVertexArray(0); // Unbind boxVAO
 
-  unsigned char *image = SOIL_load_image("image6.png", &width, &height, 0, SOIL_LOAD_RGBA);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+  GLuint diffuseMap, specularMap, emissionMap;
+  glGenTextures(1, &diffuseMap);
+  glGenTextures(1, &specularMap);
+  glGenTextures(1, &emissionMap);
+
+  int textureWidth, textureHeight;
+  unsigned char *image;
+  
+  // diffuseMap
+  image = SOIL_load_image("res/images/diamond.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
+  glBindTexture(GL_TEXTURE_2D, diffuseMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
   glGenerateMipmap(GL_TEXTURE_2D);
   SOIL_free_image_data(image);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
   
+  // specularMap
+  image = SOIL_load_image("res/images/diamond_mask.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
+  glBindTexture(GL_TEXTURE_2D, specularMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  SOIL_free_image_data(image);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+
+  glBindTexture(GL_TEXTURE_2D, 0);
+  lightShader.Use();
+  glUniform1i(glGetUniformLocation(lightShader.Program, "material.diffuse"), 0);
+  glUniform1i(glGetUniformLocation(lightShader.Program, "material.specular"), 1);
+
+  glm::mat4 projection = glm::perspective( camera.GetZoom( ), ( GLfloat )SCREEN_WIDTH / ( GLfloat )SCREEN_HEIGHT, 0.1f, 100.0f );
 
   while(!glfwWindowShouldClose(window)){
+    lightPos.x -= 0.005;
+    lightPos.z -= 0.005;
     GLfloat currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
@@ -213,65 +243,97 @@ int main() {
 
     // RENDER
     // Clear
-    glClearColor(0.2f, 0.6f, 0.8f, 1.0f);
+    // glClearColor(0.2f, 0.6f, 0.8f, 1.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // Objects
+    lightShader.Use();
+    GLint lightPosLoc = glGetUniformLocation(lightShader.Program, "light.position" );
+    GLint lightSpotDirLoc  = glGetUniformLocation(lightShader.Program, "light.direction");
+    GLint lightSpotCutOffLoc  = glGetUniformLocation(lightShader.Program, "light.cutOff");
+    GLint lightSpotOuterCutOffLoc  = glGetUniformLocation(lightShader.Program, "light.outerCutOff");
+    // GLint lightDirLoc = glGetUniformLocation(lightShader.Program, "light.direction");
+    GLint viewPosLoc = glGetUniformLocation(lightShader.Program, "viewPos" );
+    glUniform3f(lightSpotDirLoc, camera.GetFront().x, camera.GetFront().y, camera.GetFront().z);
+    if(flash){
+      glUniform1f(lightSpotCutOffLoc, glm::cos(glm::radians(12.5f)));
+      glUniform1f(lightSpotOuterCutOffLoc, glm::cos(glm::radians(24.5f)));
+    }else{
+      glUniform1f(lightSpotCutOffLoc, glm::cos(glm::radians(0.0f)));
+      glUniform1f(lightSpotOuterCutOffLoc, glm::cos(glm::radians(0.0f)));
+    }
+    glUniform3f(lightPosLoc, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
+    // glUniform3f(lightDirLoc, -0.2f, 1.0f, -0.3f);
+    glUniform3f(viewPosLoc, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 
-    // Activate Texture
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glUniform1i(glGetUniformLocation(ourShader.Program, "ourTexture"), 0);
+    glUniform3f(glGetUniformLocation(lightShader.Program, "light.ambient"), 0.1f, 0.1f, 0.1f);
+    glUniform3f(glGetUniformLocation(lightShader.Program, "light.diffuse"), 0.8f, 0.8f, 0.8f);
+    glUniform3f(glGetUniformLocation(lightShader.Program, "light.specular"), 1.0f, 1.0f, 1.0f);
+    glUniform1f(glGetUniformLocation(lightShader.Program, "light.constant"), 1.0f);
+    glUniform1f(glGetUniformLocation(lightShader.Program, "light.linear"), 0.09f);
+    glUniform1f(glGetUniformLocation(lightShader.Program, "light.quadratic"), 0.032f);
 
-    // Draw Triangle
-    ourShader.Use();
+    glUniform1f(glGetUniformLocation(lightShader.Program, "material.shininess"), 32.0f);
 
-    glm::mat4 projection = glm::perspective(camera.GetZoom(), (GLfloat) SCREEN_WIDTH / (GLfloat) SCREEN_HEIGHT, 0.1f, 1000.0f);
-
-    // Model 
-    glm::mat4 model(1.0f);
     glm::mat4 view(1.0f);
-    model = glm::rotate(model, (GLfloat)glfwGetTime() * 1.0f, glm::vec3(0.5f, 1.0f, 0.0f));
-    model = glm::rotate(model, (GLfloat)glfwGetTime() * 0.5f, glm::vec3(0.0f, 1.0f, 1.5f));
     view = camera.GetViewMatrix();
 
-    // Location uniforms
-    GLint modelLoc = glGetUniformLocation(ourShader.Program, "model");   
-    GLint viewLoc = glGetUniformLocation(ourShader.Program, "view");   
-    GLint projectionLoc = glGetUniformLocation(ourShader.Program, "projection");   
-    
+    GLint modelLoc = glGetUniformLocation(lightShader.Program, "model");
+    GLint viewLoc = glGetUniformLocation(lightShader.Program, "view");
+    GLint projectionLoc = glGetUniformLocation(lightShader.Program, "projection");
+
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-    glBindVertexArray(VAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, diffuseMap);
 
-    // CUBES
-    for(GLuint i = 0; i < 13; i++) {
-      glm::mat4 model(1.0f);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, specularMap);
+
+    glm::mat4 model;
+    glBindVertexArray(boxVAO);
+
+    for(GLuint i = 0; i < 10; i++){
+      model = glm::mat4(1.0f);
       model = glm::translate(model, cubePositions[i]);
-      // model = glm::rotate(model, (GLfloat)glfwGetTime() * (i+1), glm::vec3(0.4f, 1.0f, 0.0f));
-      // model = glm::rotate(model, (GLfloat)glfwGetTime() * (i+1), glm::vec3(0.1f, 0.4f, 0.5f));
+      
       GLfloat angle = 20.0f * i;
+
       model = glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
-      if(i == 0){
-        model = glm::translate(model, glm::vec3(0.0f, -8.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(30.0f, 1.0f, 30.0f));
-      }
       glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-
       glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
-
-    // GROUND
-    //glm::mat4 model(1.0f);
-    
-    // unbind
+    } 
     glBindVertexArray(0);
 
+    // Lamp
+    /*
+    lampShader.Use();
+
+    modelLoc = glGetUniformLocation(lampShader.Program, "model");
+    viewLoc = glGetUniformLocation(lampShader.Program, "view");
+    projectionLoc = glGetUniformLocation(lampShader.Program, "projection");
+
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, lightPos);
+    model = glm::scale(model, glm::vec3(0.2f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+    glBindVertexArray(lightVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0); // Unbind
+
+    */
     // Swap buffers
     glfwSwapBuffers(window);
   }
-  glDeleteVertexArrays(1, &VAO);
+  glDeleteVertexArrays(1, &boxVAO);
+  // glDeleteVertexArrays(1, &lightVAO);
   glDeleteBuffers(1, &VBO);
 
   glfwTerminate();
@@ -307,6 +369,11 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mode
       keys[key] = true;
     }else if(GLFW_RELEASE == action){
       keys[key] = false;
+    }
+    if(key == 102 || key == 70){
+      if(GLFW_PRESS == action){
+        flash = !flash;
+      } 
     }
   }
 }
