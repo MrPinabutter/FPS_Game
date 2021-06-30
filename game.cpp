@@ -9,6 +9,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include "Camera.h"
+#include "Model.h"
 
 const GLint WIDTH = 800, HEIGHT = 600;
 bool flash = true;
@@ -82,6 +83,13 @@ int main() {
   glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   glEnable(GL_DEPTH_TEST);
+
+  // Compile shaders
+  Shader shader( "res/shaders/modelLoading.vs", "res/shaders/modelLoading.frag" );
+    
+  // Load models
+  Model gunModel( "res/models/Gun.obj" );
+    
 
   // Suport to alpha (png)
   glEnable(GL_BLEND);
@@ -197,9 +205,11 @@ int main() {
 
   glBindVertexArray(0); // Unbind boxVAO
 
-  GLuint diffuseMap, specularMap, emissionMap;
+  GLuint diffuseMap, specularMap, diffuseMap2, specularMap2, emissionMap;
   glGenTextures(1, &diffuseMap);
   glGenTextures(1, &specularMap);
+  glGenTextures(1, &diffuseMap2);
+  glGenTextures(1, &specularMap2);
   glGenTextures(1, &emissionMap);
 
   int textureWidth, textureHeight;
@@ -227,6 +237,30 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 
+  // GROUND TEXTURES
+
+  // diffuseMap
+  image = SOIL_load_image("res/images/snow_02_diff_2k.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
+  glBindTexture(GL_TEXTURE_2D, diffuseMap2);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  SOIL_free_image_data(image);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+  
+  // specularMap
+  image = SOIL_load_image("res/images/snow_02_spec_2k.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
+  glBindTexture(GL_TEXTURE_2D, specularMap2);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  SOIL_free_image_data(image);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+
   glBindTexture(GL_TEXTURE_2D, 0);
   lightShader.Use();
   glUniform1i(glGetUniformLocation(lightShader.Program, "material.diffuse"), 0);
@@ -245,8 +279,8 @@ int main() {
 
     // RENDER
     // Clear
-    // glClearColor(0.2f, 0.6f, 0.8f, 1.0f);
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClearColor(0.08f, 0.14f, 0.2f, 1.0f);
+    // glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Objects
@@ -326,15 +360,35 @@ int main() {
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+    // Texturas
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, diffuseMap2);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, specularMap2);
+
+    glm::mat4 model;
+    // Chão
+    glBindVertexArray(boxVAO);
+
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, -5.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(60.0f, 1.0f, 60.0f));
+
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+
+    // Texturas
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, diffuseMap);
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, specularMap);
 
-    glm::mat4 model;
+    // Cubos voadores
     glBindVertexArray(boxVAO);
-
     for(GLuint i = 0; i < 10; i++){
       model = glm::mat4(1.0f);
       model = glm::translate(model, cubePositions[i]);
@@ -347,6 +401,25 @@ int main() {
       glDrawArrays(GL_TRIANGLES, 0, 36);
     } 
     glBindVertexArray(0);
+
+    // Load Models
+    shader.Use();
+
+    glUniformMatrix4fv( glGetUniformLocation( shader.Program, "projection" ), 1, GL_FALSE, glm::value_ptr( projection ) );
+    glUniformMatrix4fv( glGetUniformLocation( shader.Program, "view" ), 1, GL_FALSE, glm::value_ptr( view ) );
+
+    // Draw the loaded model
+    model = glm::mat4(1.0f);
+    model = glm::translate( model, glm::vec3( camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z ) ); 
+    model = glm::translate( model, glm::vec3( camera.GetFront().x, camera.GetFront().y, camera.GetFront().z ) ); 
+    model = glm::rotate( model, glm::radians(camera.GetRight()), glm::vec3(0.0f, -1.0f, 0.0f ));
+    model = glm::rotate( model, 60.0f, glm::vec3(0.0f, 1.0f, 0.0f ) );
+    model = glm::rotate( model, camera.GetFront().y, glm::vec3(0.0f, 0.0f, -1.0f ) );
+    model = glm::scale( model, glm::vec3(0.9f));
+    model = glm::translate( model, glm::vec3( 0.3, -0.3f, -0.4f ) ); 
+
+    glUniformMatrix4fv( glGetUniformLocation( shader.Program, "model" ), 1, GL_FALSE, glm::value_ptr( model ) );
+    gunModel.Draw( shader );
 
     // Lamp
     lampShader.Use();
@@ -385,6 +458,8 @@ int main() {
 }
 
 void DoMovement(){
+  camera.ProcessGravity(deltaTime);
+  
   if((keys[GLFW_KEY_LEFT_SHIFT] || keys[GLFW_KEY_RIGHT_SHIFT])){
     deltaTime = 2 * deltaTime;
   }
@@ -417,6 +492,11 @@ void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mode
       if(GLFW_PRESS == action){
         flash = !flash;
       } 
+    }
+    if(key == GLFW_KEY_SPACE) 
+    {
+      if(GLFW_PRESS == action)
+      camera.ProcessJump(deltaTime, 4);
     }
   }
 }

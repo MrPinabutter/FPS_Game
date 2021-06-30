@@ -27,7 +27,9 @@ const GLfloat PITCH      =  0.0f;
 const GLfloat SPEED      =  4.0f;
 const GLfloat SENSITIVTY =  0.15f;
 const GLfloat ZOOM       =  45.0f;
+const GLfloat GRAVITY    =  0.5f;
 
+GLfloat fallVelocity = 0.0f;
 
 // An abstract camera class that processes input and calculates the corresponding Eular Angles, Vectors and Matrices for use in OpenGL
 class Camera
@@ -66,14 +68,22 @@ public:
         
         if ( direction == FORWARD )
         {
-            this->position += this->front * velocity;
+            this->position.x += this->front.x * velocity;
+            this->position.z += this->front.z * velocity;
         }
         
         if ( direction == BACKWARD )
         {
-            this->position -= this->front * velocity;
+            this->position.x -= this->front.x * velocity;
+            this->position.z -= this->front.z * velocity;
         }
         
+        if ( direction == UP )
+        {
+            
+            velocity *= 0.5f;
+        }
+
         if ( direction == LEFT )
         {
             this->position -= this->right * velocity;
@@ -83,10 +93,23 @@ public:
         {
             this->position += this->right * velocity;
         }
-        
-        if ( direction == UP )
-        {
-            this->position += this->worldUp * velocity;
+    }
+
+    void ProcessGravity(GLfloat deltaTime){
+        fallVelocity += GRAVITY * deltaTime;
+        if(this->position.y > -1.0f){
+            this->position += this->worldUp * (-fallVelocity);
+        }else{
+            this->position.y = -1.0000f;
+            fallVelocity == 0.0f;
+        }
+    }
+
+    void ProcessJump(GLfloat deltaTime, GLfloat strength = 3.0f){
+        if(this->position.y < -0.09){
+            fallVelocity = 0.0f;
+            fallVelocity += (GRAVITY - strength) * deltaTime * strength;
+            this->position += worldUp * (-fallVelocity);
         }
     }
     
@@ -117,25 +140,6 @@ public:
         this->updateCameraVectors( );
     }
     
-    // Processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
-    void ProcessMouseScroll( GLfloat yOffset )
-    {
-        if ( this->zoom >= 1.0f && this->zoom <= 45.0f )
-        {
-            this->zoom -= yOffset;
-        }
-        
-        if ( this->zoom <= 1.0f )
-        {
-            this->zoom = 1.0f;
-        }
-        
-        if ( this->zoom >= 45.0f )
-        {
-            this->zoom = 45.0f;
-        }
-    }
-    
     GLfloat GetZoom( )
     {
         return this->zoom;
@@ -147,6 +151,10 @@ public:
 
     glm::vec3 GetFront() { 
         return this->front; 
+    }
+
+    GLfloat GetRight() { 
+        return this->yaw; 
     }
     
 private:
@@ -177,6 +185,8 @@ private:
         this->front = glm::normalize( front );
         // Also re-calculate the Right and Up vector
         this->right = glm::normalize( glm::cross( this->front, this->worldUp ) );  // Normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
+        std::cout << "x " << this->right.x << std::endl;
+        std::cout << "z " << this->right.z << std::endl;
         this->up = glm::normalize( glm::cross( this->right, this->front ) );
     }
 };
