@@ -92,6 +92,13 @@ public:
         {
             this->position += this->right * velocity;
         }
+        
+        // Stay on 60x60 limits
+
+        if(this->position.x > 27) this->position.x = 27;
+        if(this->position.x < -27) this->position.x = -27;
+        if(this->position.z > 27) this->position.z = 27;
+        if(this->position.z < -27) this->position.z = -27;
     }
 
     void ProcessGravity(GLfloat deltaTime, bool squat){

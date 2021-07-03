@@ -14,12 +14,16 @@
 
 const GLint WIDTH = 800, HEIGHT = 600;
 bool flash = true;
+
 // Bullets Props
 bool shoot[6];
 bool showBullet[6];
 bool backBullets = false;
 int actualBullet = 6; // Unlock weapon on first click
 glm::vec3 bulletDirections[6];
+
+// AirPlane direction
+bool airPlaneRight = true;
 
 int SCREEN_WIDTH, SCREEN_HEIGHT;
 
@@ -167,13 +171,13 @@ int main() {
   glm::vec3 cubePositions[] = {
     glm::vec3(  0.0f,   4.0f,   0.0f),
     glm::vec3(  -24.0f,   5.0f,   26.0f),
-    glm::vec3(  22.0f,  2.2f,  22.0f),
-    glm::vec3(  15.0f,  2.0f,  12.3f),
-    glm::vec3(  -5.4f,   0.4f,  5.5f),
+    glm::vec3(  22.0f,  3.2f,  22.0f),
+    glm::vec3(  15.0f,  3.0f,  12.3f),
+    glm::vec3(  -5.4f,   2.4f,  5.5f),
     glm::vec3(  10.7f,  3.0f,   -3.5f),
-    glm::vec3(  -20.0f,   -2.0f,  20.5f),
-    glm::vec3(  -5.0f,   2.0f,   -4.0f),
-    glm::vec3(  -13.5f,   0.2f,   -11.5f),
+    glm::vec3(  -20.0f,   3.0f,  20.5f),
+    glm::vec3(  -5.0f,   4.0f,   -4.0f),
+    glm::vec3(  -13.5f,   5.2f,   -11.5f),
     glm::vec3(  -1.3f,  1.0f,   -26.0f)
   };
 
@@ -194,6 +198,8 @@ int main() {
     glm::vec3(-30.0f,0.0f, 0.0f),
     glm::vec3(0.0f,0.0f, 30.0f)
   };
+
+  glm::vec3 airPlanePosition(-100.0f, 15.0f, 0.0f);
 
   // Init Bullets
   for(int i = 0; i < 6; i++){
@@ -533,8 +539,35 @@ int main() {
     glUniformMatrix4fv( glGetUniformLocation( shader.Program, "model" ), 1, GL_FALSE, glm::value_ptr( model ) );
     gunModel.Draw( shader );
 
+
     // ----------------------------------------------------------------
-    //                              LAMP
+    //                            AIRPLANE MODEL
+    // ----------------------------------------------------------------
+
+    // translate to player
+    model = glm::mat4(1.0f);
+    model = glm::translate( model, airPlanePosition ); 
+    if (abs(airPlanePosition.x) > 150) {
+      airPlaneRight = !airPlaneRight;
+    }
+
+    if(airPlaneRight) {
+      airPlanePosition.x += 1.0f;
+      model = glm::rotate( model, glm::radians(-90.0f), glm::vec3( 1.0f, 0.0f, 0.0f ) ); 
+      model = glm::rotate( model, glm::radians(-90.0f), glm::vec3( 0.0f, 0.0f, 1.0f ) ); 
+    }
+    else{ 
+      airPlanePosition.x -= 1.0f;
+      model = glm::rotate( model, glm::radians(-90.0f), glm::vec3( 1.0f, 0.0f, 0.0f ) ); 
+      model = glm::rotate( model, glm::radians(90.0f), glm::vec3( 0.0f, 0.0f, 1.0f ) ); 
+    }
+    model = glm::scale( model, glm::vec3(0.01f));
+
+    glUniformMatrix4fv( glGetUniformLocation( shader.Program, "model" ), 1, GL_FALSE, glm::value_ptr( model ) );
+    AirPlaneModel.Draw( shader );
+
+    // ----------------------------------------------------------------
+    //                              BULLETS
     // ----------------------------------------------------------------
 
     bulletLightShader.Use();
@@ -550,14 +583,14 @@ int main() {
 
     glm::vec3 normalizedDirection;
     for(GLuint i = 0; i < 6; i++){
-      int countBulletsOnAir = 0; //
+      int countBulletsOnAir = 0;
       model = glm::mat4(1.0f);
       model = glm::translate(model, lightBulletsPositions[i]);
 
       // Handle back bullets to player
       if(backBullets){
         for(int i = 0; i < 6; i++){ 
-          // Push only shooted bullets
+          // Pull only shooted bullets
           if(shoot[i]){ 
             normalizedDirection = glm::normalize(camera.GetPosition() - lightBulletsPositions[i]); // Normalized Direction - BulletPlayer
             bulletDirections[i].x = normalizedDirection.x*2;
