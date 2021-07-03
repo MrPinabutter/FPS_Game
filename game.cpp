@@ -1,5 +1,6 @@
 #define GLEW_STATIC
 #include <iostream>
+#include <string>
 #include <GL/glew.h>  
 #include <GLFW/glfw3.h>
 #include "SOIL2/SOIL2.h"
@@ -13,23 +14,39 @@
 
 const GLint WIDTH = 800, HEIGHT = 600;
 bool flash = true;
+// Bullets Props
+bool shoot[4];
+bool showBullet[4];
+bool backBullets = false;
+int actualBullet = -1; // Unlock weapon on first click
+glm::vec3 bulletDirections[4];
+
 int SCREEN_WIDTH, SCREEN_HEIGHT;
 
+// Close window with esc press
 void updateInput(GLFWwindow* window){   
-  // Close window with esc press
   if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
     glfwSetWindowShouldClose(window, GLFW_TRUE);
   }
 }
 
+// Callbacks
 void KeyCallback(GLFWwindow *window, int key, int scancode, int action, int mode);
 void MouseCallback(GLFWwindow *window, double xPos, double yPos);
+void MouseClicksCallback(GLFWwindow* window, int button, int action, int mods);
 void DoMovement();
 
+
+// Colissions
+bool colission(float x1, float y1 , float z1, float height, float width, float depth, float x2, float y2, float z2, float raio2);
+bool colissionSphereSphere(float x1, float y1, float z1, float raio1, float x2, float y2, float z2, float raio2);
+
+// Initial camera position
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 GLfloat lastX = WIDTH/2.0f;
 GLfloat lastY = WIDTH/2.0f;
 
+// Keyboard keys
 bool keys[1024];
 bool firstMouse = true;
 
@@ -67,6 +84,7 @@ int main() {
 
   glfwSetKeyCallback(window, KeyCallback);
   glfwSetCursorPosCallback(window, MouseCallback);
+  glfwSetMouseButtonCallback(window, MouseClicksCallback);
 
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   
@@ -147,25 +165,30 @@ int main() {
   };
 
   glm::vec3 cubePositions[] = {
-    glm::vec3(  0.0f,   0.0f,   0.0f),
-    glm::vec3(  2.0f,   5.0f,   -15.0f),
-    glm::vec3(  -1.5f,  -2.2f,  -2.5f),
-    glm::vec3(  -3.8f,  -2.0f,  -12.3f),
-    glm::vec3(  2.4f,   -0.4f,  -3.5f),
+    glm::vec3(  0.0f,   4.0f,   0.0f),
+    glm::vec3(  2.0f,   5.0f,   15.0f),
+    glm::vec3(  -15.0f,  -2.2f,  -2.5f),
+    glm::vec3(  -5.0f,  -2.0f,  -12.3f),
+    glm::vec3(  2.4f,   -0.4f,  -13.5f),
     glm::vec3(  -1.7f,  3.0f,   -7.5f),
-    glm::vec3(  1.3f,   -2.0f,  -2.5f),
+    glm::vec3(  13.0f,   -2.0f,  -2.5f),
     glm::vec3(  1.5f,   2.0f,   -2.5f),
-    glm::vec3(  1.5f,   0.2f,   -1.5f),
-    glm::vec3(  -1.3f,  1.0f,   -1.5f)
+    glm::vec3(  1.5f,   0.2f,   -11.5f),
+    glm::vec3(  -1.3f,  1.0f,   -9.0f)
   };
 
   // Positions of point lights
   glm::vec3 pointLightPositions[] = {
-    glm::vec3(0.7f, 0.2f, 2.0f),
-    glm::vec3(2.3f, -3.3f, -4.0f),
-    glm::vec3(-4.0f, 2.0f, -12.0f),
-    glm::vec3(0.0f, 0.0f, -3.0f)
+    glm::vec3(0.7f, -0.2f, 2.0f),
+    glm::vec3(7.0f, -1.3f, -4.0f),
+    glm::vec3(-4.0f, 0.0f, -12.0f),
+    glm::vec3(-7.0f, 1.0f, -3.0f)
   };
+
+  // Init Bullets
+  for(int i = 0; i < 4; i++){
+    shoot[i] = false;
+  }
 
   GLuint VBO, boxVAO;
   glGenVertexArrays(1, &boxVAO);
@@ -205,11 +228,13 @@ int main() {
 
   glBindVertexArray(0); // Unbind boxVAO
 
-  GLuint diffuseMap, specularMap, diffuseMap2, specularMap2, emissionMap;
+  GLuint diffuseMap, specularMap, diffuseMap2, specularMap2, diffuseMap3, specularMap3,emissionMap;
   glGenTextures(1, &diffuseMap);
   glGenTextures(1, &specularMap);
   glGenTextures(1, &diffuseMap2);
   glGenTextures(1, &specularMap2);
+  glGenTextures(1, &diffuseMap3);
+  glGenTextures(1, &specularMap3);
   glGenTextures(1, &emissionMap);
 
   int textureWidth, textureHeight;
@@ -238,6 +263,30 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 
   // GROUND TEXTURES
+
+  // diffuseMap
+  image = SOIL_load_image("res/images/snow_02_diff_2k.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
+  glBindTexture(GL_TEXTURE_2D, diffuseMap2);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  SOIL_free_image_data(image);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+  
+  // specularMap
+  image = SOIL_load_image("res/images/snow_02_spec_2k.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
+  glBindTexture(GL_TEXTURE_2D, specularMap2);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  SOIL_free_image_data(image);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+
+  // WALL TEXTURES
 
   // diffuseMap
   image = SOIL_load_image("res/images/snow_02_diff_2k.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
@@ -300,8 +349,8 @@ int main() {
     // Point light 1
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].position" ), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z );
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].ambient" ), 0.05f, 0.05f, 0.05f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].diffuse" ), 0.8f, 0.8f, 0.8f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].specular" ), 1.0f, 1.0f, 1.0f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].diffuse" ), 0.6f, 0.4f, 1.0f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].specular" ), 0.6f, 0.4f, 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[0].constant" ), 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[0].linear" ), 0.09f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[0].quadratic" ), 0.032f );
@@ -309,8 +358,8 @@ int main() {
     // Point light 2
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].position" ), pointLightPositions[1].x, pointLightPositions[1].y, pointLightPositions[1].z );
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].ambient" ), 0.05f, 0.05f, 0.05f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].diffuse" ), 0.8f, 0.8f, 0.8f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].specular" ), 1.0f, 1.0f, 1.0f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].diffuse" ), 0.6f, 0.4f, 1.0f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].specular" ), 0.6f, 0.4f, 1.0f  );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[1].constant" ), 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[1].linear" ), 0.09f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[1].quadratic" ), 0.032f );
@@ -318,8 +367,8 @@ int main() {
     // Point light 3
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].position" ), pointLightPositions[2].x, pointLightPositions[2].y, pointLightPositions[2].z );
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].ambient" ), 0.05f, 0.05f, 0.05f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].diffuse" ), 0.8f, 0.8f, 0.8f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].specular" ), 1.0f, 1.0f, 1.0f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].diffuse" ), 0.6f, 0.4f, 1.0f);
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].specular" ), 0.6f, 0.4f, 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[2].constant" ), 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[2].linear" ), 0.09f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[2].quadratic" ), 0.032f );
@@ -327,8 +376,8 @@ int main() {
     // Point light 4
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].position" ), pointLightPositions[3].x, pointLightPositions[3].y, pointLightPositions[3].z );
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].ambient" ), 0.05f, 0.05f, 0.05f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].diffuse" ), 0.8f, 0.8f, 0.8f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].specular" ), 1.0f, 1.0f, 1.0f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].diffuse" ), 0.6f, 0.4f, 1.0f);
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].specular" ), 0.6f, 0.4f, 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[3].constant" ), 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[3].linear" ), 0.09f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[3].quadratic" ), 0.032f );
@@ -409,6 +458,7 @@ int main() {
     glUniformMatrix4fv( glGetUniformLocation( shader.Program, "view" ), 1, GL_FALSE, glm::value_ptr( view ) );
 
     // Draw the loaded model
+    // translate to player
     model = glm::mat4(1.0f);
     model = glm::translate( model, glm::vec3( camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z ) ); 
     model = glm::translate( model, glm::vec3( camera.GetFront().x, camera.GetFront().y, camera.GetFront().z ) ); 
@@ -435,14 +485,46 @@ int main() {
     for(GLuint i = 0; i < 4; i++){
       model = glm::mat4(1.0f);
       model = glm::translate(model, pointLightPositions[i]);
-      model = glm::scale(model, glm::vec3(0.2f));
+
+      // Handle back bullets to player
+      if(backBullets){
+        for(int i = 0; i < 4; i++){ 
+          bulletDirections[i].x = (-pointLightPositions[i].x + camera.GetPosition().x)/10;
+          bulletDirections[i].y = (-pointLightPositions[i].y + camera.GetPosition().y)/10;
+          bulletDirections[i].z = (-pointLightPositions[i].z + camera.GetPosition().z)/10;
+          actualBullet = -1;
+        }
+      }
+
+      // Handle shoot
+      if(shoot[i]) { 
+        pointLightPositions[i].x += bulletDirections[i].x/3;
+        pointLightPositions[i].y += bulletDirections[i].y/3;
+        pointLightPositions[i].z += bulletDirections[i].z/3;
+        // if(collisionBalls()){ // Handle back bullets to player
+        //   shoot[i] = false;
+        // }
+      } else
+
+      // Recharge bullet to trigger
+      if(i == actualBullet) { 
+        pointLightPositions[i].x = camera.GetPosition().x;
+        pointLightPositions[i].y = camera.GetPosition().y - 0.2f;
+        pointLightPositions[i].z = camera.GetPosition().z;
+        model = glm::translate(model, camera.GetPosition()); 
+        model = glm::translate(model, camera.GetFront()); 
+        model = glm::rotate(model, glm::radians( camera.GetRight()), glm::vec3(0.0f, -1.0f, 0.0f));
+        model = glm::rotate(model, 60.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, camera.GetFront().y, glm::vec3(0.0f, 0.0f, -1.0f));
+        model = glm::scale(model, glm::vec3(0.05f));
+        model = glm::translate( model, glm::vec3(0.3, -0.4f, -0.4f)); 
+      } 
+      model = glm::scale(model, glm::vec3(0.1f)); 
       glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
   
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 
-    pointLightPositions[0].z -= 0.04;
-    
     glBindVertexArray(0); // Unbind
 
     // Swap buffers
@@ -458,7 +540,7 @@ int main() {
 }
 
 void DoMovement(){
-  camera.ProcessGravity(deltaTime);
+  camera.ProcessGravity(deltaTime, keys[GLFW_KEY_LEFT_CONTROL]);
   
   if((keys[GLFW_KEY_LEFT_SHIFT] || keys[GLFW_KEY_RIGHT_SHIFT])){
     deltaTime = 2 * deltaTime;
@@ -475,6 +557,9 @@ void DoMovement(){
   }
   if(keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT]){
     camera.ProcessKeyboard(RIGHT, deltaTime);
+  }
+  if(keys[GLFW_KEY_R]){
+    backBullets = true;
   }
   if(keys[GLFW_KEY_SPACE]) {
     camera.ProcessKeyboard(UP, deltaTime);
@@ -515,4 +600,56 @@ void MouseCallback(GLFWwindow *window, double xPos, double yPos){
   lastY = yPos;
 
   camera.ProcessMouseMovement(xOffset, yOffset);
+}
+
+void MouseClicksCallback(GLFWwindow* window, int button, int action, int mods){
+  if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE){
+    shoot[actualBullet] = true;
+    bulletDirections[actualBullet].x = camera.GetFront().x;
+    bulletDirections[actualBullet].y = camera.GetFront().y;
+    bulletDirections[actualBullet].z = camera.GetFront().z;
+    if(actualBullet < 4){
+      actualBullet ++;
+    }
+  }
+}
+
+bool colissionSphereSphere(float x1, float y1, float z1, float raio1, float x2, float y2, float z2, float raio2) {
+	float d = sqrt((- x1 + x2)  * (- x1 +  x2) + (-y1 + y2) * (-y1 + y2) +  ( -z1 + z2) * (-z1 + z2));
+	if(d <= (raio1 + raio2))
+		return true;
+	else
+		return false;
+}
+
+bool colission(float x1, float y1 , float z1, float height, float width, float depth, float x2, float y2, float z2, float raio2) {
+	double sphereXDistance = fabs(x2 - x1);
+	double sphereYDistance = fabs(y2 - y1);//profundidade no caso do jogo
+	double sphereZDistance = fabs(z2 - z1);
+
+	if (sphereXDistance > (width / 2 + raio2)) {
+		return false;
+	}
+	if (sphereYDistance > (depth / 2 + raio2)) {
+		return false;
+	}
+	if (sphereZDistance > (height / 2 + raio2)) {
+		return false;
+	}
+
+	if (sphereXDistance <= (width / 2)) {
+		return true;
+	}
+	if (sphereYDistance <= (depth / 2)) {
+		return true;
+	}
+	if (sphereZDistance <= (height / 2)) {
+		return true;
+	}
+
+	double cornerDistance_sq = ((sphereXDistance - width / 2) * (sphereXDistance - width / 2)) +
+    ((sphereYDistance - depth / 2) * (sphereYDistance - depth / 2) +
+    ((sphereZDistance - height / 2) * (sphereZDistance - height / 2)));
+
+	return (cornerDistance_sq <= (raio2 * raio2));
 }

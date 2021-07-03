@@ -24,10 +24,10 @@ enum Camera_Movement
 // Default camera values
 const GLfloat YAW        = -90.0f;
 const GLfloat PITCH      =  0.0f;
-const GLfloat SPEED      =  4.0f;
+const GLfloat SPEED      =  6.0f;
 const GLfloat SENSITIVTY =  0.15f;
 const GLfloat ZOOM       =  45.0f;
-const GLfloat GRAVITY    =  0.5f;
+const GLfloat GRAVITY    =  0.55f;
 
 GLfloat fallVelocity = 0.0f;
 
@@ -80,7 +80,6 @@ public:
         
         if ( direction == UP )
         {
-            
             velocity *= 0.5f;
         }
 
@@ -95,17 +94,23 @@ public:
         }
     }
 
-    void ProcessGravity(GLfloat deltaTime){
+    void ProcessGravity(GLfloat deltaTime, bool squat){
+        float ground;
         fallVelocity += GRAVITY * deltaTime;
-        if(this->position.y > -1.0f){
+        if(squat) {
+            ground = -1.0f;
+        }else {
+            ground = -0.2f;
+        }
+        if(this->position.y > ground){
             this->position += this->worldUp * (-fallVelocity);
         }else{
-            this->position.y = -1.0000f;
+            this->position.y = ground;
             fallVelocity == 0.0f;
         }
     }
 
-    void ProcessJump(GLfloat deltaTime, GLfloat strength = 3.0f){
+    void ProcessJump(GLfloat deltaTime, GLfloat strength = 6.0f){
         if(this->position.y < -0.09){
             fallVelocity = 0.0f;
             fallVelocity += (GRAVITY - strength) * deltaTime * strength;
@@ -185,8 +190,6 @@ private:
         this->front = glm::normalize( front );
         // Also re-calculate the Right and Up vector
         this->right = glm::normalize( glm::cross( this->front, this->worldUp ) );  // Normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-        std::cout << "x " << this->right.x << std::endl;
-        std::cout << "z " << this->right.z << std::endl;
         this->up = glm::normalize( glm::cross( this->right, this->front ) );
     }
 };
