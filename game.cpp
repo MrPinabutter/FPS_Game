@@ -185,6 +185,14 @@ int main() {
     glm::vec3(-7.0f, 1.0f, -3.0f)
   };
 
+  // Wall Positions
+  glm::vec3 wallCubePositions[] = {
+    glm::vec3(30.0f, 0.0f, 0.0f),
+    glm::vec3(0.0f, 0.0f, -30.0f),
+    glm::vec3(-30.0f,0.0f, 0.0f),
+    glm::vec3(0.0f,0.0f, 30.0f)
+  };
+
   // Init Bullets
   for(int i = 0; i < 4; i++){
     shoot[i] = false;
@@ -228,18 +236,19 @@ int main() {
 
   glBindVertexArray(0); // Unbind boxVAO
 
-  GLuint diffuseMap, specularMap, diffuseMap2, specularMap2, diffuseMap3, specularMap3,emissionMap;
+  GLuint diffuseMap, specularMap, diffuseMapFloor, specularMapFloor, diffuseMapWall, specularMapWall,emissionMap;
   glGenTextures(1, &diffuseMap);
   glGenTextures(1, &specularMap);
-  glGenTextures(1, &diffuseMap2);
-  glGenTextures(1, &specularMap2);
-  glGenTextures(1, &diffuseMap3);
-  glGenTextures(1, &specularMap3);
+  glGenTextures(1, &diffuseMapFloor);
+  glGenTextures(1, &specularMapFloor);
+  glGenTextures(1, &diffuseMapWall);
+  glGenTextures(1, &specularMapWall);
   glGenTextures(1, &emissionMap);
 
   int textureWidth, textureHeight;
   unsigned char *image;
   
+  // Diamond blocks
   // diffuseMap
   image = SOIL_load_image("res/images/diamond.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
   glBindTexture(GL_TEXTURE_2D, diffuseMap);
@@ -263,10 +272,9 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 
   // GROUND TEXTURES
-
   // diffuseMap
   image = SOIL_load_image("res/images/snow_02_diff_2k.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
-  glBindTexture(GL_TEXTURE_2D, diffuseMap2);
+  glBindTexture(GL_TEXTURE_2D, diffuseMapFloor);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
   glGenerateMipmap(GL_TEXTURE_2D);
   SOIL_free_image_data(image);
@@ -277,7 +285,7 @@ int main() {
   
   // specularMap
   image = SOIL_load_image("res/images/snow_02_spec_2k.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
-  glBindTexture(GL_TEXTURE_2D, specularMap2);
+  glBindTexture(GL_TEXTURE_2D, specularMapFloor);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
   glGenerateMipmap(GL_TEXTURE_2D);
   SOIL_free_image_data(image);
@@ -287,10 +295,9 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 
   // WALL TEXTURES
-
   // diffuseMap
-  image = SOIL_load_image("res/images/snow_02_diff_2k.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
-  glBindTexture(GL_TEXTURE_2D, diffuseMap2);
+  image = SOIL_load_image("res/images/wall_dif.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
+  glBindTexture(GL_TEXTURE_2D, diffuseMapWall);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
   glGenerateMipmap(GL_TEXTURE_2D);
   SOIL_free_image_data(image);
@@ -300,8 +307,8 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
   
   // specularMap
-  image = SOIL_load_image("res/images/snow_02_spec_2k.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
-  glBindTexture(GL_TEXTURE_2D, specularMap2);
+  image = SOIL_load_image("res/images/wall_spec.png", & textureWidth, & textureHeight, 0, SOIL_LOAD_RGB);
+  glBindTexture(GL_TEXTURE_2D, specularMapWall);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
   glGenerateMipmap(GL_TEXTURE_2D);
   SOIL_free_image_data(image);
@@ -335,7 +342,6 @@ int main() {
     // Objects
     lightShader.Use();
 
-    // GLint lightDirLoc = glGetUniformLocation(lightShader.Program, "light.direction");
     GLint viewPosLoc = glGetUniformLocation(lightShader.Program, "viewPos" );
     glUniform3f( viewPosLoc, camera.GetPosition( ).x, camera.GetPosition( ).y, camera.GetPosition( ).z);
     glUniform1f(glGetUniformLocation(lightShader.Program, "material.shininess"), 32.0f);
@@ -409,15 +415,15 @@ int main() {
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-    // Texturas
+    // Floor Textures
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, diffuseMap2);
+    glBindTexture(GL_TEXTURE_2D, diffuseMapFloor);
 
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, specularMap2);
+    glBindTexture(GL_TEXTURE_2D, specularMapFloor);
 
+    // Floor Model
     glm::mat4 model;
-    // Chão
     glBindVertexArray(boxVAO);
 
     model = glm::mat4(1.0f);
@@ -429,14 +435,14 @@ int main() {
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 
-    // Texturas
+    // Diamond Textures
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, diffuseMap);
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, specularMap);
 
-    // Cubos voadores
+    // Flying boxes
     glBindVertexArray(boxVAO);
     for(GLuint i = 0; i < 10; i++){
       model = glm::mat4(1.0f);
@@ -445,6 +451,30 @@ int main() {
       GLfloat angle = 20.0f * i;
 
       model = glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
+      glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    } 
+    glBindVertexArray(0);
+
+    // Wall textures
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, diffuseMapWall);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, specularMapWall);
+
+    // Wall Models
+    glBindVertexArray(boxVAO);
+    for(GLuint i = 0; i < 4; i++){
+      // cout << i << endl;
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, wallCubePositions[i]);
+      if(wallCubePositions[i].x != 0)
+        model = glm::scale(model, glm::vec3(3.0f, 10.0f, 60.0f));
+      if(wallCubePositions[i].z != 0)
+        model = glm::scale(model, glm::vec3(60.0f, 10.0f, 3.0f));
+      
       glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
       glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -482,17 +512,36 @@ int main() {
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
     glBindVertexArray(lightVAO);
+
     for(GLuint i = 0; i < 4; i++){
+      int countBulletsOnAir = 0; //
       model = glm::mat4(1.0f);
       model = glm::translate(model, pointLightPositions[i]);
 
       // Handle back bullets to player
       if(backBullets){
         for(int i = 0; i < 4; i++){ 
-          bulletDirections[i].x = (-pointLightPositions[i].x + camera.GetPosition().x)/10;
-          bulletDirections[i].y = (-pointLightPositions[i].y + camera.GetPosition().y)/10;
-          bulletDirections[i].z = (-pointLightPositions[i].z + camera.GetPosition().z)/10;
-          actualBullet = -1;
+          // Push only shooted bullets
+          if(shoot[i]){ 
+            bulletDirections[i].x = (camera.GetPosition().x - pointLightPositions[i].x)/10;
+            bulletDirections[i].y = (camera.GetPosition().y - pointLightPositions[i].y)/10;
+            bulletDirections[i].z = (camera.GetPosition().z - pointLightPositions[i].z)/10;
+            actualBullet = -1;
+          }else{
+            countBulletsOnAir ++;
+          }
+        }
+        // Catch bullets
+        if(colissionSphereSphere(
+          pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z, 0.3f, // bullet
+          camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z, 1.0f)       // Player
+        ){ 
+          pointLightPositions[i] = glm::vec3(-999.0f);
+          shoot[i] = false;
+          if(countBulletsOnAir == 4){ 
+            backBullets = false;
+            countBulletsOnAir = 0;
+          }
         }
       }
 
@@ -501,11 +550,8 @@ int main() {
         pointLightPositions[i].x += bulletDirections[i].x/3;
         pointLightPositions[i].y += bulletDirections[i].y/3;
         pointLightPositions[i].z += bulletDirections[i].z/3;
-        // if(collisionBalls()){ // Handle back bullets to player
-        //   shoot[i] = false;
-        // }
+        // Handle back bullets to player
       } else
-
       // Recharge bullet to trigger
       if(i == actualBullet) { 
         pointLightPositions[i].x = camera.GetPosition().x;
@@ -524,7 +570,6 @@ int main() {
   
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
-
     glBindVertexArray(0); // Unbind
 
     // Swap buffers
@@ -560,6 +605,7 @@ void DoMovement(){
   }
   if(keys[GLFW_KEY_R]){
     backBullets = true;
+    actualBullet = -1;
   }
   if(keys[GLFW_KEY_SPACE]) {
     camera.ProcessKeyboard(UP, deltaTime);
