@@ -15,11 +15,11 @@
 const GLint WIDTH = 800, HEIGHT = 600;
 bool flash = true;
 // Bullets Props
-bool shoot[4];
-bool showBullet[4];
+bool shoot[6];
+bool showBullet[6];
 bool backBullets = false;
-int actualBullet = -1; // Unlock weapon on first click
-glm::vec3 bulletDirections[4];
+int actualBullet = 6; // Unlock weapon on first click
+glm::vec3 bulletDirections[6];
 
 int SCREEN_WIDTH, SCREEN_HEIGHT;
 
@@ -107,7 +107,7 @@ int main() {
     
   // Load models
   Model gunModel( "res/models/Gun.obj" );
-    
+  Model AirPlaneModel( "res/models/11805_airplane_v2_L2.obj" );
 
   // Suport to alpha (png)
   glEnable(GL_BLEND);
@@ -115,7 +115,7 @@ int main() {
 
   // Build and compile shaders and lamp
   Shader lightShader("lighting.vs", "lighting.frag");
-  Shader lampShader("lamp.vs", "lamp.frag");
+  Shader bulletLightShader("lamp.vs", "lamp.frag");
 
   // use with Perspective Projection
   GLfloat vertices[] =
@@ -166,23 +166,25 @@ int main() {
 
   glm::vec3 cubePositions[] = {
     glm::vec3(  0.0f,   4.0f,   0.0f),
-    glm::vec3(  2.0f,   5.0f,   15.0f),
-    glm::vec3(  -15.0f,  -2.2f,  -2.5f),
-    glm::vec3(  -5.0f,  -2.0f,  -12.3f),
-    glm::vec3(  2.4f,   -0.4f,  -13.5f),
-    glm::vec3(  -1.7f,  3.0f,   -7.5f),
-    glm::vec3(  13.0f,   -2.0f,  -2.5f),
-    glm::vec3(  1.5f,   2.0f,   -2.5f),
-    glm::vec3(  1.5f,   0.2f,   -11.5f),
-    glm::vec3(  -1.3f,  1.0f,   -9.0f)
+    glm::vec3(  -24.0f,   5.0f,   26.0f),
+    glm::vec3(  22.0f,  2.2f,  22.0f),
+    glm::vec3(  15.0f,  2.0f,  12.3f),
+    glm::vec3(  -5.4f,   0.4f,  5.5f),
+    glm::vec3(  10.7f,  3.0f,   -3.5f),
+    glm::vec3(  -20.0f,   -2.0f,  20.5f),
+    glm::vec3(  -5.0f,   2.0f,   -4.0f),
+    glm::vec3(  -13.5f,   0.2f,   -11.5f),
+    glm::vec3(  -1.3f,  1.0f,   -26.0f)
   };
 
   // Positions of point lights
-  glm::vec3 pointLightPositions[] = {
+  glm::vec3 lightBulletsPositions[] = {
     glm::vec3(0.7f, -0.2f, 2.0f),
     glm::vec3(7.0f, -1.3f, -4.0f),
     glm::vec3(-4.0f, 0.0f, -12.0f),
-    glm::vec3(-7.0f, 1.0f, -3.0f)
+    glm::vec3(-7.0f, 1.0f, -3.0f),
+    glm::vec3(7.0f, 1.0f, 3.0f),
+    glm::vec3(-12.0f, 2.0f, 7.0f)
   };
 
   // Wall Positions
@@ -194,8 +196,8 @@ int main() {
   };
 
   // Init Bullets
-  for(int i = 0; i < 4; i++){
-    shoot[i] = false;
+  for(int i = 0; i < 6; i++){
+    shoot[i] = true;
   }
 
   GLuint VBO, boxVAO;
@@ -348,45 +350,63 @@ int main() {
 
     // Directional Light
     glUniform3f( glGetUniformLocation( lightShader.Program, "dirLight.direction" ), -0.2f, -1.0f, -0.3f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "dirLight.ambient" ), 0.05f, 0.05f, 0.05f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "dirLight.diffuse" ), 0.4f, 0.4f, 0.4f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "dirLight.ambient" ), 0.1f, 0.1f, 0.1f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "dirLight.diffuse" ), 0.8f, 0.8f, 0.8f );
     glUniform3f( glGetUniformLocation( lightShader.Program, "dirLight.specular" ), 0.5f, 0.5f, 0.5f );
     
     // Point light 1
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].position" ), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].position" ), lightBulletsPositions[0].x, lightBulletsPositions[0].y, lightBulletsPositions[0].z );
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].ambient" ), 0.05f, 0.05f, 0.05f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].diffuse" ), 0.6f, 0.4f, 1.0f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].specular" ), 0.6f, 0.4f, 1.0f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].diffuse" ), 0.6f, 0.6f, 0.8f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[0].specular" ), 0.6f, 0.6f, 0.8f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[0].constant" ), 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[0].linear" ), 0.09f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[0].quadratic" ), 0.032f );
     
     // Point light 2
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].position" ), pointLightPositions[1].x, pointLightPositions[1].y, pointLightPositions[1].z );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].position" ), lightBulletsPositions[1].x, lightBulletsPositions[1].y, lightBulletsPositions[1].z );
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].ambient" ), 0.05f, 0.05f, 0.05f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].diffuse" ), 0.6f, 0.4f, 1.0f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].specular" ), 0.6f, 0.4f, 1.0f  );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].diffuse" ), 0.6f, 0.6f, 0.8f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[1].specular" ), 0.6f, 0.6f, 0.8f  );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[1].constant" ), 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[1].linear" ), 0.09f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[1].quadratic" ), 0.032f );
     
     // Point light 3
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].position" ), pointLightPositions[2].x, pointLightPositions[2].y, pointLightPositions[2].z );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].position" ), lightBulletsPositions[2].x, lightBulletsPositions[2].y, lightBulletsPositions[2].z );
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].ambient" ), 0.05f, 0.05f, 0.05f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].diffuse" ), 0.6f, 0.4f, 1.0f);
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].specular" ), 0.6f, 0.4f, 1.0f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].diffuse" ), 0.6f, 0.6f, 0.8f);
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[2].specular" ), 0.6f, 0.6f, 0.8f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[2].constant" ), 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[2].linear" ), 0.09f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[2].quadratic" ), 0.032f );
     
     // Point light 4
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].position" ), pointLightPositions[3].x, pointLightPositions[3].y, pointLightPositions[3].z );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].position" ), lightBulletsPositions[3].x, lightBulletsPositions[3].y, lightBulletsPositions[3].z );
     glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].ambient" ), 0.05f, 0.05f, 0.05f );
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].diffuse" ), 0.6f, 0.4f, 1.0f);
-    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].specular" ), 0.6f, 0.4f, 1.0f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].diffuse" ), 0.6f, 0.6f, 0.8f);
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[3].specular" ), 0.6f, 0.6f, 0.8f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[3].constant" ), 1.0f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[3].linear" ), 0.09f );
     glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[3].quadratic" ), 0.032f );
+    
+    // Point light 5
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[4].position" ), lightBulletsPositions[4].x, lightBulletsPositions[4].y, lightBulletsPositions[4].z );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[4].ambient" ), 0.05f, 0.05f, 0.05f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[4].diffuse" ), 0.6f, 0.6f, 0.8f);
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[4].specular" ), 0.6f, 0.6f, 0.8f );
+    glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[4].constant" ), 1.0f );
+    glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[4].linear" ), 0.09f );
+    glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[4].quadratic" ), 0.032f );
+    
+    // Point light 6
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[5].position" ), lightBulletsPositions[5].x, lightBulletsPositions[5].y, lightBulletsPositions[5].z );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[5].ambient" ), 0.05f, 0.05f, 0.05f );
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[5].diffuse" ), 0.6f, 0.6f, 0.8f);
+    glUniform3f( glGetUniformLocation( lightShader.Program, "pointLights[5].specular" ), 0.6f, 0.6f, 0.8f );
+    glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[5].constant" ), 1.0f );
+    glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[5].linear" ), 0.09f );
+    glUniform1f( glGetUniformLocation( lightShader.Program, "pointLights[5].quadratic" ), 0.032f );
     
     // SpotLight
     glUniform3f( glGetUniformLocation( lightShader.Program, "spotLight.position" ), camera.GetPosition( ).x, camera.GetPosition( ).y, camera.GetPosition( ).z );
@@ -415,6 +435,10 @@ int main() {
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+    // ----------------------------------------------------------------
+    //                              FLOOR
+    // ----------------------------------------------------------------
+    
     // Floor Textures
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, diffuseMapFloor);
@@ -435,6 +459,10 @@ int main() {
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 
+    // ----------------------------------------------------------------
+    //                   TARGETS (DIAMOND BLOCKS)
+    // ----------------------------------------------------------------
+
     // Diamond Textures
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, diffuseMap);
@@ -448,16 +476,17 @@ int main() {
       model = glm::mat4(1.0f);
       model = glm::translate(model, cubePositions[i]);
       
-      GLfloat angle = 20.0f * i;
-
-      model = glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
       glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
       glDrawArrays(GL_TRIANGLES, 0, 36);
     } 
     glBindVertexArray(0);
 
-    // Wall textures
+    // ----------------------------------------------------------------
+    //                              WALLS
+    // ----------------------------------------------------------------
+
+    // Textures
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, diffuseMapWall);
 
@@ -487,7 +516,10 @@ int main() {
     glUniformMatrix4fv( glGetUniformLocation( shader.Program, "projection" ), 1, GL_FALSE, glm::value_ptr( projection ) );
     glUniformMatrix4fv( glGetUniformLocation( shader.Program, "view" ), 1, GL_FALSE, glm::value_ptr( view ) );
 
-    // Draw the loaded model
+    // ----------------------------------------------------------------
+    //                            GUN MODEL
+    // ----------------------------------------------------------------
+
     // translate to player
     model = glm::mat4(1.0f);
     model = glm::translate( model, glm::vec3( camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z ) ); 
@@ -501,31 +533,36 @@ int main() {
     glUniformMatrix4fv( glGetUniformLocation( shader.Program, "model" ), 1, GL_FALSE, glm::value_ptr( model ) );
     gunModel.Draw( shader );
 
-    // Lamp
-    lampShader.Use();
+    // ----------------------------------------------------------------
+    //                              LAMP
+    // ----------------------------------------------------------------
 
-    modelLoc = glGetUniformLocation(lampShader.Program, "model");
-    viewLoc = glGetUniformLocation(lampShader.Program, "view");
-    projectionLoc = glGetUniformLocation(lampShader.Program, "projection");
+    bulletLightShader.Use();
+
+    modelLoc = glGetUniformLocation(bulletLightShader.Program, "model");
+    viewLoc = glGetUniformLocation(bulletLightShader.Program, "view");
+    projectionLoc = glGetUniformLocation(bulletLightShader.Program, "projection");
 
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
     glBindVertexArray(lightVAO);
 
-    for(GLuint i = 0; i < 4; i++){
+    glm::vec3 normalizedDirection;
+    for(GLuint i = 0; i < 6; i++){
       int countBulletsOnAir = 0; //
       model = glm::mat4(1.0f);
-      model = glm::translate(model, pointLightPositions[i]);
+      model = glm::translate(model, lightBulletsPositions[i]);
 
       // Handle back bullets to player
       if(backBullets){
-        for(int i = 0; i < 4; i++){ 
+        for(int i = 0; i < 6; i++){ 
           // Push only shooted bullets
           if(shoot[i]){ 
-            bulletDirections[i].x = (camera.GetPosition().x - pointLightPositions[i].x)/10;
-            bulletDirections[i].y = (camera.GetPosition().y - pointLightPositions[i].y)/10;
-            bulletDirections[i].z = (camera.GetPosition().z - pointLightPositions[i].z)/10;
+            normalizedDirection = glm::normalize(camera.GetPosition() - lightBulletsPositions[i]); // Normalized Direction - BulletPlayer
+            bulletDirections[i].x = normalizedDirection.x*2;
+            bulletDirections[i].y = normalizedDirection.y*2;
+            bulletDirections[i].z = normalizedDirection.z*2;
             actualBullet = -1;
           }else{
             countBulletsOnAir ++;
@@ -533,12 +570,12 @@ int main() {
         }
         // Catch bullets
         if(colissionSphereSphere(
-          pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z, 0.3f, // bullet
+          lightBulletsPositions[i].x, lightBulletsPositions[i].y, lightBulletsPositions[i].z, 0.3f, // bullet
           camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z, 1.0f)       // Player
         ){ 
-          pointLightPositions[i] = glm::vec3(-999.0f);
+          lightBulletsPositions[i] = glm::vec3(-999.0f);
           shoot[i] = false;
-          if(countBulletsOnAir == 4){ 
+          if(countBulletsOnAir == 6){ 
             backBullets = false;
             countBulletsOnAir = 0;
           }
@@ -547,16 +584,49 @@ int main() {
 
       // Handle shoot
       if(shoot[i]) { 
-        pointLightPositions[i].x += bulletDirections[i].x/3;
-        pointLightPositions[i].y += bulletDirections[i].y/3;
-        pointLightPositions[i].z += bulletDirections[i].z/3;
-        // Handle back bullets to player
-      } else
-      // Recharge bullet to trigger
-      if(i == actualBullet) { 
-        pointLightPositions[i].x = camera.GetPosition().x;
-        pointLightPositions[i].y = camera.GetPosition().y - 0.2f;
-        pointLightPositions[i].z = camera.GetPosition().z;
+        lightBulletsPositions[i].x += bulletDirections[i].x/3;
+        lightBulletsPositions[i].y += bulletDirections[i].y/3;
+        lightBulletsPositions[i].z += bulletDirections[i].z/3;
+
+        // If hit on flying blocks
+        for(GLuint j = 0; j < 10; j++) {
+          if(colission(cubePositions[j].x, cubePositions[j].y, cubePositions[j].z, 1.0f, 1.0f, 1.0f, 
+          lightBulletsPositions[i].x, lightBulletsPositions[i].y, lightBulletsPositions[i].z, 0.2f)
+          ){
+            bulletDirections[i] = glm::vec3(0.0f);
+            cubePositions[j] = glm::vec3(999.0f);
+          }
+        }
+
+        // Shoot Hit Ground
+        if(lightBulletsPositions[i].y < -4.45){
+          bulletDirections[i] = glm::vec3(0.0f);
+          lightBulletsPositions[i].y = -4.45;
+        }
+        // Shoot dont go to further away
+        if(lightBulletsPositions[i].x > 70){
+          bulletDirections[i] = glm::vec3(0.0f);
+          lightBulletsPositions[i].x = 70;
+        }else
+        if(lightBulletsPositions[i].x < -70){
+          bulletDirections[i] = glm::vec3(0.0f);
+          lightBulletsPositions[i].x = -70;
+        }else
+        if(lightBulletsPositions[i].z > 70){
+          bulletDirections[i] = glm::vec3(0.0f);
+          lightBulletsPositions[i].z = 70;
+        }else
+        if(lightBulletsPositions[i].z < -70){
+          bulletDirections[i] = glm::vec3(0.0f);
+          lightBulletsPositions[i].z = -70;
+        }
+
+      } else if(i == actualBullet) {  // Recharge bullet to trigger
+        lightBulletsPositions[i].x = camera.GetPosition().x;
+        lightBulletsPositions[i].y = camera.GetPosition().y - 0.2f;
+        lightBulletsPositions[i].z = camera.GetPosition().z;
+
+        // Position the bullet at the player position
         model = glm::translate(model, camera.GetPosition()); 
         model = glm::translate(model, camera.GetFront()); 
         model = glm::rotate(model, glm::radians( camera.GetRight()), glm::vec3(0.0f, -1.0f, 0.0f));
@@ -565,7 +635,7 @@ int main() {
         model = glm::scale(model, glm::vec3(0.05f));
         model = glm::translate( model, glm::vec3(0.3, -0.4f, -0.4f)); 
       } 
-      model = glm::scale(model, glm::vec3(0.1f)); 
+      model = glm::scale(model, glm::vec3(0.05f)); 
       glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
   
       glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -651,10 +721,10 @@ void MouseCallback(GLFWwindow *window, double xPos, double yPos){
 void MouseClicksCallback(GLFWwindow* window, int button, int action, int mods){
   if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE){
     shoot[actualBullet] = true;
-    bulletDirections[actualBullet].x = camera.GetFront().x;
-    bulletDirections[actualBullet].y = camera.GetFront().y;
-    bulletDirections[actualBullet].z = camera.GetFront().z;
-    if(actualBullet < 4){
+    bulletDirections[actualBullet].x = camera.GetFront().x * 2;
+    bulletDirections[actualBullet].y = camera.GetFront().y * 2;
+    bulletDirections[actualBullet].z = camera.GetFront().z * 2;
+    if(actualBullet <= 5){
       actualBullet ++;
     }
   }
