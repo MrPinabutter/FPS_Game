@@ -17,8 +17,7 @@ bool flash = true;
 
 // Bullets Props
 bool shoot[6];
-bool showBullet[6];
-bool backBullets = false;
+int handleBackBullets;
 int actualBullet = 6; // Unlock weapon on first click
 glm::vec3 bulletDirections[6];
 
@@ -42,7 +41,7 @@ void DoMovement();
 
 
 // Colissions
-bool colission(float x1, float y1 , float z1, float height, float width, float depth, float x2, float y2, float z2, float raio2);
+bool colissionSphereCube(float x1, float y1 , float z1, float height, float width, float depth, float x2, float y2, float z2, float raio2);
 bool colissionSphereSphere(float x1, float y1, float z1, float raio1, float x2, float y2, float z2, float raio2);
 
 // Initial camera position
@@ -107,6 +106,8 @@ int main() {
   glEnable(GL_DEPTH_TEST);
 
   // Compile shaders
+  Shader lightShader("lighting.vs", "lighting.frag");
+  Shader bulletLightShader("lamp.vs", "lamp.frag");
   Shader shader( "res/shaders/modelLoading.vs", "res/shaders/modelLoading.frag" );
     
   // Load models
@@ -118,9 +119,6 @@ int main() {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  // Build and compile shaders and lamp
-  Shader lightShader("lighting.vs", "lighting.frag");
-  Shader bulletLightShader("lamp.vs", "lamp.frag");
 
   // use with Perspective Projection
   GLfloat vertices[] =
@@ -548,7 +546,6 @@ int main() {
     //                            AIRPLANE MODEL
     // ----------------------------------------------------------------
 
-    // translate to player
     model = glm::mat4(1.0f);
     model = glm::translate( model, airPlanePosition ); 
     if (abs(airPlanePosition.x) > 150) {
@@ -613,7 +610,7 @@ int main() {
       model = glm::translate(model, lightBulletsPositions[i]);
 
       // Handle back bullets to player
-      if(backBullets){
+      if(handleBackBullets == 1){
         for(int i = 0; i < 6; i++){ 
           // Pull only shooted bullets
           if(shoot[i]){ 
@@ -621,7 +618,7 @@ int main() {
             bulletDirections[i].x = normalizedDirection.x*2;
             bulletDirections[i].y = normalizedDirection.y*2;
             bulletDirections[i].z = normalizedDirection.z*2;
-            actualBullet = -1;
+            actualBullet = 0;
           }else{
             countBulletsOnAir ++;
           }
@@ -634,7 +631,7 @@ int main() {
           lightBulletsPositions[i] = glm::vec3(-999.0f);
           shoot[i] = false;
           if(countBulletsOnAir == 6){ 
-            backBullets = false;
+            handleBackBullets = 0;
             countBulletsOnAir = 0;
           }
         }
@@ -648,7 +645,7 @@ int main() {
 
         // If hit on flying blocks
         for(GLuint j = 0; j < 10; j++) {
-          if(colission(cubePositions[j].x, cubePositions[j].y, cubePositions[j].z, 1.0f, 1.0f, 1.0f, 
+          if(colissionSphereCube(cubePositions[j].x, cubePositions[j].y, cubePositions[j].z, 1.0f, 1.0f, 1.0f, 
           lightBulletsPositions[i].x, lightBulletsPositions[i].y, lightBulletsPositions[i].z, 0.2f)
           ){
             bulletDirections[i] = glm::vec3(0.0f);
@@ -749,10 +746,12 @@ void DoMovement(){
   if(keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT]){
     camera.ProcessKeyboard(RIGHT, deltaTime);
   }
+
   if(keys[GLFW_KEY_R]){
-    backBullets = true;
-    actualBullet = -1;
+    handleBackBullets = 1;
+    actualBullet = 0;
   }
+
   if(keys[GLFW_KEY_SPACE]) {
     camera.ProcessKeyboard(UP, deltaTime);
   }
@@ -800,7 +799,7 @@ void MouseClicksCallback(GLFWwindow* window, int button, int action, int mods){
     bulletDirections[actualBullet].x = camera.GetFront().x * 2;
     bulletDirections[actualBullet].y = camera.GetFront().y * 2;
     bulletDirections[actualBullet].z = camera.GetFront().z * 2;
-    if(actualBullet <= 5){
+    if(actualBullet <= 6){
       actualBullet ++;
     }
   }
@@ -813,8 +812,7 @@ bool colissionSphereSphere(float x1, float y1, float z1, float raio1, float x2, 
 	else
 		return false;
 }
-
-bool colission(float x1, float y1 , float z1, float height, float width, float depth, float x2, float y2, float z2, float raio2) {
+bool colissionSphereCube(float x1, float y1 , float z1, float height, float width, float depth, float x2, float y2, float z2, float raio2) {
 	double sphereXDistance = fabs(x2 - x1);
 	double sphereYDistance = fabs(y2 - y1);//profundidade no caso do jogo
 	double sphereZDistance = fabs(z2 - z1);
