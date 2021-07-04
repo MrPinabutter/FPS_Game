@@ -23,7 +23,7 @@ int actualBullet = 6; // Unlock weapon on first click
 glm::vec3 bulletDirections[6];
 
 // AirPlane direction
-bool airPlaneRight = true;
+bool flyingVeiclesDirection = true;
 
 int SCREEN_WIDTH, SCREEN_HEIGHT;
 
@@ -112,6 +112,7 @@ int main() {
   // Load models
   Model gunModel( "res/models/Gun.obj" );
   Model AirPlaneModel( "res/models/11805_airplane_v2_L2.obj" );
+  Model crazyHelicopterModel( "res/models/chopper.obj" );
 
   // Suport to alpha (png)
   glEnable(GL_BLEND);
@@ -200,6 +201,7 @@ int main() {
   };
 
   glm::vec3 airPlanePosition(-100.0f, 15.0f, 0.0f);
+  glm::vec3 crazyHelicopterPosition(0.0f, 25.0f, -100.0f);
 
   // Init Bullets
   for(int i = 0; i < 6; i++){
@@ -331,6 +333,8 @@ int main() {
   glUniform1i(glGetUniformLocation(lightShader.Program, "material.specular"), 1);
 
   glm::mat4 projection = glm::perspective( camera.GetZoom( ), ( GLfloat )SCREEN_WIDTH / ( GLfloat )SCREEN_HEIGHT, 0.1f, 100.0f );
+
+  GLfloat angle = 0.0f;
 
   while(!glfwWindowShouldClose(window)){
     GLfloat currentFrame = glfwGetTime();
@@ -548,10 +552,10 @@ int main() {
     model = glm::mat4(1.0f);
     model = glm::translate( model, airPlanePosition ); 
     if (abs(airPlanePosition.x) > 150) {
-      airPlaneRight = !airPlaneRight;
+      flyingVeiclesDirection = !flyingVeiclesDirection;
     }
 
-    if(airPlaneRight) {
+    if(flyingVeiclesDirection) {
       airPlanePosition.x += 1.0f;
       model = glm::rotate( model, glm::radians(-90.0f), glm::vec3( 1.0f, 0.0f, 0.0f ) ); 
       model = glm::rotate( model, glm::radians(-90.0f), glm::vec3( 0.0f, 0.0f, 1.0f ) ); 
@@ -565,6 +569,27 @@ int main() {
 
     glUniformMatrix4fv( glGetUniformLocation( shader.Program, "model" ), 1, GL_FALSE, glm::value_ptr( model ) );
     AirPlaneModel.Draw( shader );
+
+    // ----------------------------------------------------------------
+    //                            HELICOPTER MODEL
+    // ----------------------------------------------------------------
+
+    // translate to player
+    model = glm::mat4(1.0f);
+    model = glm::translate( model, crazyHelicopterPosition ); 
+
+    if(flyingVeiclesDirection) {
+      crazyHelicopterPosition.z += 1.0f;
+    }
+    else{ 
+      crazyHelicopterPosition.z -= 1.0f;
+    }
+    model = glm::scale( model, glm::vec3(1.0f));
+    model = glm::rotate(model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+    angle+=1.0f;
+
+    glUniformMatrix4fv( glGetUniformLocation( shader.Program, "model" ), 1, GL_FALSE, glm::value_ptr( model ) );
+    crazyHelicopterModel.Draw( shader );
 
     // ----------------------------------------------------------------
     //                              BULLETS
@@ -636,6 +661,24 @@ int main() {
           bulletDirections[i] = glm::vec3(0.0f);
           lightBulletsPositions[i].y = -4.45;
         }
+
+        if(lightBulletsPositions[i].x > 28.40f && lightBulletsPositions[i].y < 5.0f){
+          bulletDirections[i] = glm::vec3(0.0f);
+          lightBulletsPositions[i].x = 28.45f;
+        }
+        if(lightBulletsPositions[i].x < -28.40f && lightBulletsPositions[i].y < 5.0f){
+          bulletDirections[i] = glm::vec3(0.0f);
+          lightBulletsPositions[i].x = -28.45f;
+        }
+        if(lightBulletsPositions[i].z > 28.40f && lightBulletsPositions[i].y < 5.0f){
+          bulletDirections[i] = glm::vec3(0.0f);
+          lightBulletsPositions[i].z = 28.45f;
+        }
+        if(lightBulletsPositions[i].z < -28.40f && lightBulletsPositions[i].y < 5.0f){
+          bulletDirections[i] = glm::vec3(0.0f);
+          lightBulletsPositions[i].z = -28.45f;
+        }
+
         // Shoot dont go to further away
         if(lightBulletsPositions[i].x > 70){
           bulletDirections[i] = glm::vec3(0.0f);
